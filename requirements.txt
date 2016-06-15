@@ -1,0 +1,4 @@
+cloudshell-networking-cisco>=2.1,<2.2
+cloudshell-cli>=2.1,<2.2
+cloudshell-snmp>=2.1,<2.2
+inject==3.3.1
