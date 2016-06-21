@@ -2,6 +2,5 @@ from cloudshell.networking.cisco.autoload.cisco_generic_snmp_autoload import Cis
 
 
 class CiscoASASNMPAutoload(CiscoGenericSNMPAutoload):
-    def __init__(self):
-        CiscoGenericSNMPAutoload.__init__(self)
-        self.if_entity = "Name"
+    IF_ENTITY = "ifName"
+    ENTITY_PHYSICAL = "entPhysicalName"
