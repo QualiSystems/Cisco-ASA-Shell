@@ -1,2 +1,2 @@
 *.pyc
-cloudshell/networking/cisco/asa/test*.py
+test*.py

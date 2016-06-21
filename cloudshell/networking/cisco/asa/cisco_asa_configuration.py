@@ -1,13 +1,14 @@
 import re
-from cloudshell.networking.cisco.autoload.cisco_generic_snmp_autoload import CiscoGenericSNMPAutoload
+from cloudshell.networking.cisco.asa.cisco_asa_snmp_autoload import CiscoASASNMPAutoload
+# from cloudshell.networking.cisco.autoload.cisco_generic_snmp_autoload import CiscoGenericSNMPAutoload
 from cloudshell.networking.cisco.asa.cisco_asa_configuration_operations import CiscoASAConfigurationOperations
 from cloudshell.networking.cisco.cisco_connectivity_operations import CiscoConnectivityOperations
 from cloudshell.networking.cisco.cisco_send_command_operations import CiscoSendCommandOperations
 from cloudshell.shell.core.context_utils import get_decrypted_password_by_attribute_name_wrapper
 
 
-DEFAULT_PROMPT = '.*>\s*$|.*#\s*$'
-ENABLE_PROMPT = '.*#\s*$'
+DEFAULT_PROMPT = '[>#]\s*$'
+ENABLE_PROMPT = '#\s*$'
 CONFIG_MODE_PROMPT = '\(config.*\)#\s*$'
 
 
@@ -16,8 +17,8 @@ def send_default_actions(session):
     :return:
     """
     enter_enable_mode(session=session)
-    session.hardware_expect('terminal length 0', ENABLE_PROMPT)
-    session.hardware_expect('terminal no exec prompt timestamp', ENABLE_PROMPT)
+    session.hardware_expect('terminal pager 0', ENABLE_PROMPT)
+    # session.hardware_expect('terminal no exec prompt timestamp', ENABLE_PROMPT)
     session.hardware_expect(ENTER_CONFIG_MODE_PROMPT_COMMAND, CONFIG_MODE_PROMPT)
     session.hardware_expect('no logging console', CONFIG_MODE_PROMPT)
     session.hardware_expect('exit', DEFAULT_PROMPT + '|' + ENABLE_PROMPT)
@@ -26,7 +27,7 @@ def send_default_actions(session):
 ENTER_CONFIG_MODE_PROMPT_COMMAND = 'configure terminal'
 EXIT_CONFIG_MODE_PROMPT_COMMAND = 'exit'
 DEFAULT_ACTIONS = send_default_actions
-SUPPORTED_OS = ["ASA"]
+SUPPORTED_OS = ["A(daptive)? ?S(ecurity)? ?A(ppliance)?"]
 
 
 def enter_enable_mode(session):
@@ -41,5 +42,5 @@ def enter_enable_mode(session):
 CONNECTIVITY_OPERATIONS_CLASS = CiscoConnectivityOperations
 CONFIGURATION_OPERATIONS_CLASS = CiscoASAConfigurationOperations
 FIRMWARE_OPERATIONS_CLASS = CiscoASAConfigurationOperations
-AUTOLOAD_OPERATIONS_CLASS = CiscoGenericSNMPAutoload
+AUTOLOAD_OPERATIONS_CLASS = CiscoASASNMPAutoload
 SEND_COMMAND_OPERATIONS_CLASS = CiscoSendCommandOperations
