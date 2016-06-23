@@ -36,7 +36,7 @@ class CiscoASAResourceDriver(ResourceDriverInterface, NetworkingResourceDriverIn
         return response
 
     @context_from_args
-    def restore(self, context, path, config_type, restore_method, vrf=None):
+    def restore(self, context, path, config_type, restore_method):
         """Restore selected file to the provided destination
 
         :param path: source config file
@@ -44,14 +44,14 @@ class CiscoASAResourceDriver(ResourceDriverInterface, NetworkingResourceDriverIn
         :param restore_method: append or override methods
         """
 
-        handler = inject.instance('handler')
-        response = handler.restore_configuration(source_file=path, restore_method=restore_method,
-                                                 config_type=config_type, vrf=vrf)
-        handler.logger.info('Restore completed')
-        handler.logger.info(response)
+        configuration_operations = inject.instance('configuration_operations')
+        response = configuration_operations.restore_configuration(source_file=path, restore_method=restore_method,
+                                                                  config_type=config_type)
+        configuration_operations.logger.info('Restore completed')
+        configuration_operations.logger.info(response)
 
     @context_from_args
-    def save(self, context, destination_host, source_filename, vrf=None):
+    def save(self, context, destination_host, source_filename):
         """Save selected file to the provided destination
 
         :param source_filename: source file, which will be saved
@@ -59,7 +59,7 @@ class CiscoASAResourceDriver(ResourceDriverInterface, NetworkingResourceDriverIn
         """
 
         configuration_operations = inject.instance('configuration_operations')
-        response = configuration_operations.save_configuration(destination_host, source_filename, vrf)
+        response = configuration_operations.save_configuration(destination_host, source_filename)
         configuration_operations.logger.info('Save completed')
         return response
 
