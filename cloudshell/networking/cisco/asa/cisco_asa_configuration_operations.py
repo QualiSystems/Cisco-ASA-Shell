@@ -94,6 +94,8 @@ class CiscoASAConfigurationOperations(CiscoConfigurationOperations):
         if not source_filename:
             raise Exception('Cisco ASA', "Configure replace method doesn't have source filename!")
 
+        self._logger.warning("Cisco ASA", "Not implemented yet")
+        """
         try:
             self.logger.debug("Cisco ASA", "Start backup running-config")
             is_backuped = self.copy(source_file=config, destination_file=backup, vrf=vrf)
@@ -103,8 +105,8 @@ class CiscoASAConfigurationOperations(CiscoConfigurationOperations):
         except Exception, err:
             raise Exception("Cisco ASA", "Could not backup running-config: {0}" .format(err))
 
-        output = self.cli.send_command(command="clear configure all")
-        # TODO add output handling if need
+        # Clear all running configuration
+        self.cli.send_config_command(command="clear configure all")
 
         try:
             self.logger.debug("Cisco ASA", "Start reload running-config from {0}" .format(source_filename))
@@ -117,3 +119,4 @@ class CiscoASAConfigurationOperations(CiscoConfigurationOperations):
             is_restored = self.copy(source_file=backup, destination_file=config, vrf=vrf)
             # TODO think about handling restore configuration from backup result
             raise Exception("Cisco ASA", "Could reload running-config: {0}".format(err))
+        """
