@@ -89,33 +89,23 @@ class CiscoASAConfigurationOperations(CiscoConfigurationOperations):
         :param vrf:
         """
         backup = "flash:backup-rc"
-        config = "running-config"
+        config = "startup-config"
 
         if not source_filename:
             raise Exception('Cisco ASA', "Configure replace method doesn't have source filename!")
 
-        self._logger.warning("Cisco ASA", "Restore method doesn't implemented yet")
+        self._logger.debug("Cisco ASA", "Start backup startup-config to flash")
+        is_backuped = self.copy(source_file=config, destination_file=backup)
+        if not is_backuped[0]:
+            raise Exception("Cisco ASA", "Couldn't backup startup-config. Check if flash has enough free space")
+        self._logger.debug("Cisco ASA", "Backup startup-config successfully")
 
-        # try:
-        #     self.logger.debug("Cisco ASA", "Start backup running-config")
-        #     is_backuped = self.copy(source_file=config, destination_file=backup, vrf=vrf)
-        #     if not is_backuped[0]:
-        #         raise Exception("Check if flash has enough free space")
-        #     self.logger.debug("Cisco ASA", "Backup running-config successfully")
-        # except Exception, err:
-        #     raise Exception("Cisco ASA", "Could not backup running-config: {0}" .format(err))
-        #
-        # # Clear all running configuration
-        # self.cli.send_config_command(command="clear configure all")
-        #
-        # try:
-        #     self.logger.debug("Cisco ASA", "Start reload running-config from {0}" .format(source_filename))
-        #     is_uploaded = self.copy(source_file=source_filename, destination_file=config, vrf=vrf)
-        #     if not is_uploaded[0]:
-        #         raise Exception(is_uploaded[1])
-        #     self.logger.debug("Cisco ASA", "Reloading running-config successfully")
-        # except Exception, err:
-        #     self.logger.error("Cisco ASA", "Restore running-config from backup")
-        #     is_restored = self.copy(source_file=backup, destination_file=config, vrf=vrf)
-        #     # TODO think about handling restore configuration from backup result
-        #     raise Exception("Cisco ASA", "Could reload running-config: {0}".format(err))
+        self._logger.debug("Cisco ASA", "Start reload startup-config from {0}".format(source_filename))
+        is_uploaded = self.copy(source_file=source_filename, destination_file=config)
+        if not is_uploaded[0]:
+            self._logger.debug("Cisco ASA", "Reloading startup-config failed: {0}".format(is_uploaded[1]))
+            self._logger.debug("Cisco ASA", "Restore startup-configuration from backup")
+            self.copy(source_file=backup, destination_file=config)
+            raise Exception(is_uploaded[1])
+        self._logger.debug("Cisco ASA", "Reloading startup-config successfully")
+        self.reload()
