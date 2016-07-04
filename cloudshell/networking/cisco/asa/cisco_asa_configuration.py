@@ -1,6 +1,5 @@
 import re
 from cloudshell.networking.cisco.asa.cisco_asa_snmp_autoload import CiscoASASNMPAutoload
-# from cloudshell.networking.cisco.autoload.cisco_generic_snmp_autoload import CiscoGenericSNMPAutoload
 from cloudshell.networking.cisco.asa.cisco_asa_configuration_operations import CiscoASAConfigurationOperations
 from cloudshell.networking.cisco.cisco_connectivity_operations import CiscoConnectivityOperations
 from cloudshell.networking.cisco.cisco_send_command_operations import CiscoSendCommandOperations
@@ -18,7 +17,6 @@ def send_default_actions(session):
     """
     enter_enable_mode(session=session)
     session.hardware_expect('terminal pager 0', ENABLE_PROMPT)
-    # session.hardware_expect('terminal no exec prompt timestamp', ENABLE_PROMPT)
     session.hardware_expect(ENTER_CONFIG_MODE_PROMPT_COMMAND, CONFIG_MODE_PROMPT)
     session.hardware_expect('no logging console', CONFIG_MODE_PROMPT)
     session.hardware_expect('exit', DEFAULT_PROMPT + '|' + ENABLE_PROMPT)

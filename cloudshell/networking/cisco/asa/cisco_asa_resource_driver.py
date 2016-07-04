@@ -27,13 +27,7 @@ class CiscoASAResourceDriver(ResourceDriverInterface, NetworkingResourceDriverIn
 
     @context_from_args
     def ApplyConnectivityChanges(self, context, request):
-        connectivity_operations = inject.instance('connectivity_operations')
-        connectivity_operations.logger.info('Start applying connectivity changes, request is: {0}'.format(str(request)))
-        response = connectivity_operations.apply_connectivity_changes(request)
-        connectivity_operations.logger.info('Finished applying connectivity changes, responce is: {0}'.format(str(
-            response)))
-        connectivity_operations.logger.info('Apply Connectivity changes completed')
-        return response
+        pass
 
     @context_from_args
     def restore(self, context, path, config_type, restore_method):

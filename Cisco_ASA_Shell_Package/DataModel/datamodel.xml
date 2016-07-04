@@ -325,7 +325,7 @@
       </AttributeValues>
           <ParentModels />
           <Drivers>
-            <DriverName>Generic Cisco ASA Firewall Driver</DriverName>
+            <DriverName>Generic Cisco ASA Driver</DriverName>
           </Drivers> 
           <Scripts />
         </ResourceModel>
