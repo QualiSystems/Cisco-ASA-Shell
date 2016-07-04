@@ -20,5 +20,6 @@ setup(
     tests_require=required_for_tests,
     version=version_from_file,
     description='QualiSystems networking cisco ASA specific Package',
-    include_package_data=True
+    include_package_data=True,
+    exclude_package_data={'': ['.gitignore', 'test']}
 )
