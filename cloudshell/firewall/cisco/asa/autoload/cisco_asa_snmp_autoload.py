@@ -9,9 +9,9 @@ from cloudshell.firewall.operations.interfaces.autoload_operations_interface imp
 
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.snmp.quali_snmp import QualiMibTable
-from cloudshell.networking.autoload.networking_autoload_resource_structure import Port, PortChannel, PowerPort, \
+from cloudshell.firewall.autoload.firewall_autoload_resource_structure import Port, PortChannel, PowerPort, \
     Chassis, Module
-from cloudshell.networking.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
+from cloudshell.firewall.autoload.firewall_autoload_resource_attributes import FirewallStandardRootAttributes
 
 
 class CiscoASASNMPAutoload(AutoloadOperationsInterface):
@@ -584,7 +584,7 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
         if match_version:
             result['version'] = match_version.groupdict()['software_version'].replace(',', '')
 
-        root = NetworkingStandardRootAttributes(**result)
+        root = FirewallStandardRootAttributes(**result)
         self.attributes.extend(root.get_autoload_resource_attributes())
         self.logger.info('Load Firewall Attributes completed.')
 
