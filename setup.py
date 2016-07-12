@@ -11,7 +11,7 @@ with open('test_requirements.txt') as f_tests:
     required_for_tests = f_tests.read().splitlines()
 
 setup(
-    name='cloudshell-networking-cisco-asa',
+    name='cloudshell-firewall-cisco-asa',
     url='http://www.qualisystems.com/',
     author='QualiSystems',
     author_email='info@qualisystems.com',
@@ -19,7 +19,7 @@ setup(
     install_requires=required,
     tests_require=required_for_tests,
     version=version_from_file,
-    description='QualiSystems networking cisco ASA specific Package',
+    description='QualiSystems firewall Cisco ASA specific Package',
     include_package_data=True,
     exclude_package_data={'': ['.gitignore', 'test']}
 )

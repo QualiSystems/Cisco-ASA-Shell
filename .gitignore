@@ -2,3 +2,5 @@
 *.pyc
 test*.py
 run_driver.py
+cisco_asa_configuration_for_test.py
+cisco_original
