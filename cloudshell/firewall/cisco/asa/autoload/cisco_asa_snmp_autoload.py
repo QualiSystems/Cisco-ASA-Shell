@@ -9,9 +9,9 @@ from cloudshell.firewall.operations.interfaces.autoload_operations_interface imp
 
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.snmp.quali_snmp import QualiMibTable
-from cloudshell.networking.autoload.networking_autoload_resource_structure import Port, PortChannel, PowerPort, \
+from cloudshell.firewall.autoload.networking_autoload_resource_structure import Port, PortChannel, PowerPort, \
     Chassis, Module
-from cloudshell.networking.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
+from cloudshell.firewall.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
 
 
 class CiscoASASNMPAutoload(AutoloadOperationsInterface):
