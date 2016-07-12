@@ -1,22 +1,26 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import inject
 
-from cloudshell.networking.generic_bootstrap import NetworkingGenericBootstrap
-from cloudshell.networking.networking_resource_driver_interface import NetworkingResourceDriverInterface
+from cloudshell.firewall.generic_bootstrap import FirewallGenericBootstrap
+from cloudshell.firewall.firewall_resource_driver_interface import FirewallResourceDriverInterface
 from cloudshell.shell.core.context_utils import context_from_args
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 
-import cloudshell.networking.cisco.asa.cisco_asa_configuration as driver_config
+import cloudshell.firewall.cisco.asa.cisco_asa_configuration as driver_config
 
 
-class CiscoASAResourceDriver(ResourceDriverInterface, NetworkingResourceDriverInterface):
+class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInterface):
     def __init__(self):
-        bootstrap = NetworkingGenericBootstrap()
+        bootstrap = FirewallGenericBootstrap()
         bootstrap.add_config(driver_config)
         bootstrap.initialize()
 
     @context_from_args
     def initialize(self, context):
         """Initialize method
+
         :type context: cloudshell.shell.core.context.driver_context.InitCommandContext
         """
 
@@ -104,6 +108,7 @@ class CiscoASAResourceDriver(ResourceDriverInterface, NetworkingResourceDriverIn
         :return: result
         :rtype: string
         """
+
         send_command_operations = inject.instance("send_command_operations")
         result_str = send_command_operations.send_config_command(command=command)
         return result_str

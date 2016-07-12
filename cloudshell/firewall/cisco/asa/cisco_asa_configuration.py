@@ -1,20 +1,24 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import re
-from cloudshell.networking.cisco.asa.cisco_asa_snmp_autoload import CiscoASASNMPAutoload
-from cloudshell.networking.cisco.asa.cisco_asa_configuration_operations import CiscoASAConfigurationOperations
-from cloudshell.networking.cisco.cisco_connectivity_operations import CiscoConnectivityOperations
-from cloudshell.networking.cisco.cisco_send_command_operations import CiscoSendCommandOperations
+from cloudshell.firewall.cisco.asa.autoload.cisco_asa_snmp_autoload import CiscoASASNMPAutoload
+from cloudshell.firewall.cisco.asa.cisco_asa_configuration_operations import CiscoASAConfigurationOperations
+from cloudshell.firewall.cisco.asa.cisco_asa_send_command_operations import CiscoASASendCommandOperations
 from cloudshell.shell.core.context_utils import get_decrypted_password_by_attribute_name_wrapper
 
 
-DEFAULT_PROMPT = '[>#]\s*$'
-ENABLE_PROMPT = '#\s*$'
-CONFIG_MODE_PROMPT = '\(config.*\)#\s*$'
+DEFAULT_PROMPT = r'[>#]\s*$'
+ENABLE_PROMPT = r'#\s*$'
+CONFIG_MODE_PROMPT = r'\(config.*\)#\s*$'
 
 
 def send_default_actions(session):
     """Send default commands to configure/clear session outputs
+
     :return:
     """
+
     enter_enable_mode(session=session)
     session.hardware_expect('terminal pager 0', ENABLE_PROMPT)
     session.hardware_expect(ENTER_CONFIG_MODE_PROMPT_COMMAND, CONFIG_MODE_PROMPT)
@@ -37,8 +41,7 @@ def enter_enable_mode(session):
         raise Exception('enter_enable_mode', 'Enable password is incorrect')
 
 
-CONNECTIVITY_OPERATIONS_CLASS = CiscoConnectivityOperations
 CONFIGURATION_OPERATIONS_CLASS = CiscoASAConfigurationOperations
 FIRMWARE_OPERATIONS_CLASS = CiscoASAConfigurationOperations
 AUTOLOAD_OPERATIONS_CLASS = CiscoASASNMPAutoload
-SEND_COMMAND_OPERATIONS_CLASS = CiscoSendCommandOperations
+SEND_COMMAND_OPERATIONS_CLASS = CiscoASASendCommandOperations
