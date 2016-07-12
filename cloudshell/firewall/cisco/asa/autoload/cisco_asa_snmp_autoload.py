@@ -480,8 +480,7 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
                              'mtu': if_table[self.port_mapping[port]]['ifMtu'],
                              'bandwidth': if_table[self.port_mapping[port]]['ifSpeed'],
                              'description': self.snmp.get_property('IF-MIB', 'ifAlias', self.port_mapping[port]),
-                             # 'adjacent': self._get_adjacent(self.port_mapping[port])
-                             }
+                             'adjacent': self._get_adjacent(self.port_mapping[port])}
             attribute_map.update(self._get_interface_details(self.port_mapping[port]))
             attribute_map.update(self._get_ip_interface_details(self.port_mapping[port]))
             port_object = Port(name=interface_name, relative_path=self.relative_path[port], **attribute_map)
