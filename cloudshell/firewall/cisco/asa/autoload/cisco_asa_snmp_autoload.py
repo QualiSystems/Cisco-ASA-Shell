@@ -123,6 +123,7 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
 
     def _is_valid_device_os(self):
         """Validate device OS using snmp
+
         :return: True or False
         """
 
@@ -446,6 +447,7 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
 
     def _get_associated_ports(self, item_id):
         """Get all ports associated with provided port channel
+
         :param item_id:
         :return:
         """

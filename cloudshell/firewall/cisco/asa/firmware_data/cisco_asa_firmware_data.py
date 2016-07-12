@@ -7,9 +7,11 @@ from firmware_data import FirmwareData
 class CiscoASAFirmwareData(FirmwareData):
     def _parse_file_path(self, file_path):
         """
+
         :param file_path:
         :return: need to return tuple, were 0 - name, 1 - version, 2 - extension
         """
+
         file_path_parts = file_path.split('/')
 
         #if len(file_path_parts) == 1:

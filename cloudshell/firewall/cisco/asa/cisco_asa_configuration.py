@@ -15,8 +15,10 @@ CONFIG_MODE_PROMPT = r'\(config.*\)#\s*$'
 
 def send_default_actions(session):
     """Send default commands to configure/clear session outputs
+
     :return:
     """
+
     enter_enable_mode(session=session)
     session.hardware_expect('terminal pager 0', ENABLE_PROMPT)
     session.hardware_expect(ENTER_CONFIG_MODE_PROMPT_COMMAND, CONFIG_MODE_PROMPT)

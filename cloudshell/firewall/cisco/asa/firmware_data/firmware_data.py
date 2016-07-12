@@ -23,6 +23,7 @@ class FirmwareData:
     @abstractmethod
     def _parse_file_path(self, file_path):
         """
+
         :param file_path:
         :return: need to return tuple, were 0 - name, 1 - version, 2 - extension
         """

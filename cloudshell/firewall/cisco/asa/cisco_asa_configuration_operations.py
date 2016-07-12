@@ -96,10 +96,12 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
 
     def _check_download_from_tftp(self, output):
         """Verify if file was successfully uploaded
+
         :param output: output from cli
         :return True or False, and success or error message
         :rtype tuple
         """
+
         is_success = True
         status_match = re.search(r'copied.*[\[\(].*[0-9]* bytes.*[\)\]]|[Cc]opy complete', output)
         message = ''
@@ -126,6 +128,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         :param source_filename: full path to the file which will replace current running-config
         :param timeout: period of time code will wait for replace to finish
         """
+
         backup = "flash:backup-sc"
         config_name = "startup-config"
 
@@ -323,6 +326,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
     def restore_configuration(self, source_file, config_type, restore_method='override'):
         """Restore configuration on device from provided configuration file
         Restore configuration from local file system or ftp/tftp server into 'running-config' or 'startup-config'.
+
         :param source_file: relative path to the file on the remote host tftp://server/sourcefile
         :param restore_method: override current config or not
         :return:
@@ -376,6 +380,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         Checks whether replace command exist on device or not
         For Cisco ASA devices always return True
         """
+
         return True
 
     def _remove_old_boot_system_config(self):
@@ -399,6 +404,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
 
     def _get_free_memory_size(self, partition):
         """Get available memory size on provided partition
+
         :param partition: file system
         :return: size of free memory in bytes
         """

@@ -20,6 +20,7 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
     @context_from_args
     def initialize(self, context):
         """Initialize method
+
         :type context: cloudshell.shell.core.context.driver_context.InitCommandContext
         """
 
@@ -107,6 +108,7 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
         :return: result
         :rtype: string
         """
+
         send_command_operations = inject.instance("send_command_operations")
         result_str = send_command_operations.send_config_command(command=command)
         return result_str
