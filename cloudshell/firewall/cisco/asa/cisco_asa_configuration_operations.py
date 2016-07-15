@@ -83,11 +83,12 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
 
         expected_map = OrderedDict()
         if host:
-            expected_map[host] = lambda session: session.send_line('')
-        expected_map[r'{0}|\s+[Vv][Rr][Ff]\s+|\[confirm\]|\?'.format(filename)] = lambda session: session.send_line('')
-        expected_map['\(y/n\)'] = lambda session: session.send_line('y')
-        expected_map['\([Yy]es/[Nn]o\)'] = lambda session: session.send_line('yes')
-        expected_map['bytes'] = lambda session: session.send_line('')
+            expected_map[r"\[{}\]".format(host)] = lambda session: session.send_line('')
+        expected_map[r"[\[\(]{}[\)\]]".format(source_file)] = lambda session: session.send_line('')
+        expected_map[r'{0}|\[confirm\]|\?'.format(filename)] = lambda session: session.send_line('')
+        expected_map[r'\(y/n\)'] = lambda session: session.send_line('y')
+        expected_map[r'\([Yy]es/[Nn]o\)'] = lambda session: session.send_line('yes')
+        expected_map[r'bytes'] = lambda session: session.send_line('')
 
         output = self.cli.send_command(command=copy_command_str, expected_map=expected_map, timeout=60)
         output += self.cli.send_command('')
@@ -113,7 +114,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
                 message += message.split('\n')[0]
                 is_success = False
 
-        error_match = re.search(r"error", output, re.IGNORECASE)
+        error_match = re.search(r"(error|fail).*", output, re.IGNORECASE)
         if error_match:
             message = 'Command Copy completed with errors.\n'
             message += error_match.group()
@@ -332,7 +333,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         :return:
         """
 
-        if not re.search('append|override', restore_method.lower()):
+        if not re.search(r'append|override', restore_method.lower()):
             raise Exception('Cisco OS', "Restore method '{}' is wrong! Use 'Append' or 'Override'".format(restore_method))
 
         if '-config' not in config_type:
@@ -340,7 +341,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
 
         self.logger.info('Restore device configuration from {}'.format(source_file))
 
-        match_data = re.search('startup-config|running-config', config_type)
+        match_data = re.search(r'startup-config|running-config', config_type)
         if not match_data:
             msg = "Configuration type '{}' is wrong, use 'startup-config' or 'running-config'.".format(config_type)
             raise Exception('Cisco OS', msg)
