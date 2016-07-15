@@ -107,7 +107,7 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
         self.logger.info('*******************************************')
         self.logger.info('SNMP discovery Completed.')
         self.logger.info('The following platform structure detected:' +
-                         '\nModel, Name, Relative Path, Uniqe Id')
+                         '\nModel, Name, Relative Path, Unique Id')
 
         for resource in self.resources:
             self.logger.info('{0},\t\t{1},\t\t{2},\t\t{3}'.format(resource.model, resource.name,
@@ -620,12 +620,6 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
         """
 
         result = ''
-        # snmp_object_id = self.snmp.get_property('SNMPv2-MIB', 'sysObjectID', 0)
-        # match_name = re.search(r'\.(?P<model>\d+$)', snmp_object_id)
-        # if match_name:
-        #     model = match_name.groupdict()['model']
-            # if model in CISCO_RESOURCE_DRIVERS_MAP:
-            #     result = CISCO_RESOURCE_DRIVERS_MAP[model].lower().replace('_', '').capitalize()
         if not result or result == '':
             self.snmp.load_mib(['CISCO-PRODUCTS-MIB', 'CISCO-ENTITY-VENDORTYPE-OID-MIB'])
             match_name = re.search(r'::(?P<model>\S+$)', self.snmp.get_property('SNMPv2-MIB', 'sysObjectID', '0'))
