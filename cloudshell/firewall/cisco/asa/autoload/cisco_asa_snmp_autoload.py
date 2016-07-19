@@ -5,13 +5,15 @@ import re
 import os
 
 import inject
-from cloudshell.firewall.operations.interfaces.autoload_operations_interface import AutoloadOperationsInterface
 
-from cloudshell.shell.core.driver_context import AutoLoadDetails
-from cloudshell.snmp.quali_snmp import QualiMibTable
+from cloudshell.configuration.cloudshell_shell_core_binding_keys import LOGGER
+from cloudshell.configuration.cloudshell_snmp_binding_keys import SNMP_HANDLER
+from cloudshell.firewall.operations.interfaces.autoload_operations_interface import AutoloadOperationsInterface
 from cloudshell.firewall.autoload.firewall_autoload_resource_structure import Port, PortChannel, PowerPort, \
     Chassis, Module
 from cloudshell.firewall.autoload.firewall_autoload_resource_attributes import FirewallStandardRootAttributes
+from cloudshell.shell.core.driver_context import AutoLoadDetails
+from cloudshell.snmp.quali_snmp import QualiMibTable
 
 
 class CiscoASASNMPAutoload(AutoloadOperationsInterface):
@@ -45,20 +47,16 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
 
     @property
     def logger(self):
-        if self._logger is None:
-            try:
-                self._logger = inject.instance('logger')
-            except:
-                raise Exception('CiscoAutoload', 'Failed to get logger.')
-        return self._logger
+        if self._logger:
+            logger = self._logger
+        else:
+            logger = inject.instance(LOGGER)
+        return logger
 
     @property
     def snmp(self):
-        if self._snmp is None:
-            try:
-                self._snmp = inject.instance('snmp_handler')
-            except:
-                raise Exception('CiscoAutoload', 'Failed to get snmp handler.')
+        if not self._snmp:
+            self._snmp = inject.instance(SNMP_HANDLER)
         return self._snmp
 
     def load_cisco_mib(self):

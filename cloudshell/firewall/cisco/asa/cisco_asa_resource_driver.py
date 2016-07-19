@@ -98,7 +98,6 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
 
         send_command_operations = inject.instance("send_command_operations")
         response = send_command_operations.send_command(command=command)
-        print response
         return response
 
     @context_from_args
