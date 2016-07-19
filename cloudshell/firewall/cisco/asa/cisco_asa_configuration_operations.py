@@ -6,6 +6,9 @@ import re
 import time
 
 from collections import OrderedDict
+
+from cloudshell.configuration.cloudshell_cli_binding_keys import CLI_SERVICE
+from cloudshell.configuration.cloudshell_shell_core_binding_keys import LOGGER, API
 from cloudshell.firewall.networking_utils import validateIP
 from cloudshell.firewall.cisco.asa.firmware_data.cisco_asa_firmware_data import CiscoASAFirmwareData
 from cloudshell.firewall.operations.interfaces.configuration_operations_interface import \
@@ -30,29 +33,24 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
 
     @property
     def logger(self):
-        if self._logger is None:
-            try:
-                self._logger = inject.instance('logger')
-            except:
-                raise Exception('Cisco ASA', 'Failed to get logger.')
-        return self._logger
+        if self._logger:
+            logger = self._logger
+        else:
+            logger = inject.instance(LOGGER)
+        return logger
 
     @property
     def api(self):
-        if self._api is None:
-            try:
-                self._api = inject.instance('api')
-            except:
-                raise Exception('Cisco ASA', 'Failed to get api handler')
-        return self._api
+        if self._api:
+            api = self._api
+        else:
+            api = inject.instance(API)
+        return api
 
     @property
     def cli(self):
         if self._cli is None:
-            try:
-                self._cli = inject.instance('cli_service')
-            except:
-                raise Exception('Cisco ASA', 'Failed to get cli_service.')
+            self._cli = inject.instance(CLI_SERVICE)
         return self._cli
 
     def copy(self, source_file='', destination_file='', timeout=600, retries=5):
@@ -73,6 +71,8 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
             destination_file_data_list = re.sub(r'/+', '/', destination_file).split('/')
             host = destination_file_data_list[1]
             filename = destination_file_data_list[-1]
+        elif "flash:" in destination_file or "flash:" in source_file:
+            filename = destination_file.split(":")[-1]
         else:
             filename = destination_file
 
@@ -85,7 +85,9 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         if host:
             expected_map[r"\[{}\]".format(host)] = lambda session: session.send_line('')
         expected_map[r"[\[\(]{}[\)\]]".format(source_file)] = lambda session: session.send_line('')
-        expected_map[r'{0}|\[confirm\]|\?'.format(filename)] = lambda session: session.send_line('')
+        expected_map[r'{}[\)\]]'.format(filename)] = lambda session: session.send_line('')
+        # expected_map[r'\w+\?'] = lambda session: session.send_line('')
+        expected_map[r'\[confirm\]'] = lambda session: session.send_line('')
         expected_map[r'\(y/n\)'] = lambda session: session.send_line('y')
         expected_map[r'\([Yy]es/[Nn]o\)'] = lambda session: session.send_line('yes')
         expected_map[r'bytes'] = lambda session: session.send_line('')
@@ -132,21 +134,21 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         if not source_filename:
             raise Exception('Cisco ASA', "Configure replace method doesn't have source filename!")
 
-        self._logger.debug("Cisco ASA", "Start backup process for '{0}' config".format(config_name))
+        self.logger.debug("Start backup process for '{0}' config".format(config_name))
         backup_done = self.copy(source_file=config_name, destination_file=backup)
         if not backup_done[0]:
             raise Exception("Cisco ASA", "Failed to backup {0} config. Check if flash has enough free space"
                             .format(config_name))
-        self._logger.debug("Cisco ASA", "Backup completed successfully")
+        self.logger.debug("Backup completed successfully")
 
-        self._logger.debug("Cisco ASA", "Start reloading {0} from {1}".format(config_name, source_filename))
+        self.logger.debug("Start reloading {0} from {1}".format(config_name, source_filename))
         is_uploaded = self.copy(source_file=source_filename, destination_file=config_name)
         if not is_uploaded[0]:
-            self._logger.debug("Cisco ASA", "Failed to reload {0}: {1}".format(config_name, is_uploaded[1]))
-            self._logger.debug("Cisco ASA", "Restore startup-configuration from backup")
+            self.logger.debug("Failed to reload {0}: {1}".format(config_name, is_uploaded[1]))
+            self.logger.debug("Restore startup-configuration from backup")
             self.copy(source_file=backup, destination_file=config_name)
             raise Exception(is_uploaded[1])
-        self._logger.debug("Cisco ASA", "Reloading startup-config successfully")
+        self.logger.debug("Reloading startup-config successfully")
         self.reload()
 
     def reload(self, sleep_timeout=60, retries=15):

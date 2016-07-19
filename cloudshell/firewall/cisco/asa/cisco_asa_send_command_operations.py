@@ -3,6 +3,8 @@
 
 import inject
 
+from cloudshell.configuration.cloudshell_cli_binding_keys import CLI_SERVICE
+from cloudshell.configuration.cloudshell_shell_core_binding_keys import LOGGER, API
 from cloudshell.firewall.operations.interfaces.send_command_interface import SendCommandInterface
 from cloudshell.shell.core.context_utils import get_resource_name
 
@@ -30,38 +32,24 @@ class CiscoASASendCommandOperations(SendCommandInterface):
 
     @property
     def logger(self):
-        if self._logger is None:
-            try:
-                self._logger = inject.instance('logger')
-            except:
-                raise Exception('Cisco OS', 'Failed to get logger.')
-        return self._logger
-
-    @property
-    def snmp_handler(self):
-        if self._snmp_handler is None:
-            try:
-                self._snmp_handler = inject.instance('snmp_handler')
-            except:
-                raise Exception('Cisco OS', 'Failed to get snmp handler.')
-        return self._snmp_handler
+        if self._logger:
+            logger = self._logger
+        else:
+            logger = inject.instance(LOGGER)
+        return logger
 
     @property
     def api(self):
-        if self._api is None:
-            try:
-                self._api = inject.instance('api')
-            except:
-                raise Exception('Cisco ASA', 'Failed to get api handler.')
-        return self._api
+        if self._api:
+            api = self._api
+        else:
+            api = inject.instance(API)
+        return api
 
     @property
     def cli(self):
         if self._cli is None:
-            try:
-                self._cli = inject.instance('cli_service')
-            except:
-                raise Exception('Cisco ASA', 'Failed to get cli_service.')
+            self._cli = inject.instance(CLI_SERVICE)
         return self._cli
 
     def send_command(self, command, expected_str=None, expected_map=None, timeout=None, retries=None,
@@ -95,6 +83,11 @@ class CiscoASASendCommandOperations(SendCommandInterface):
         """Send list of config commands to the session
 
         :param command: list of commands to send
+        :param expected_str: optional, custom expected string, if you expect something different from default prompts
+        :param expected_map: optional, custom expected map, if you expect some actions in progress of the command
+        :param timeout: optional, custom timeout
+        :param retries: optional, custom retry count, if you need more than 5 retries
+        :param is_need_default_prompt: default
 
         :return session returned output
         :rtype: string
