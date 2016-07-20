@@ -171,7 +171,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
             session_type = self.cli.get_session_type()
 
             if not session_type == 'CONSOLE':
-                self._logger.info('Session type is \'{}\', closing session...'.format(session_type))
+                self.logger.info('Session type is \'{}\', closing session...'.format(session_type))
                 self.cli.destroy_threaded_session()
 
         self.logger.info('Wait 20 seconds for device to reload...')
