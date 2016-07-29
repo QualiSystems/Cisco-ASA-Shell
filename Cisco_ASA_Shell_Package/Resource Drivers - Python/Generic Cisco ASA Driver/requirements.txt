@@ -1,0 +1,2 @@
+cloudshell-automation-api>=7.0,<7.1
+cloudshell-firewall-cisco-asa>=1.0,<1.1
