@@ -115,14 +115,14 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
 
         return True, ""
 
-    def _wait_session_up(self, session):
+    def _wait_for_session_restore(self, session):
         self.logger.debug('Waiting session up')
         waiting_reboot_time = time.time()
         while True:
             try:
                 if time.time() - waiting_reboot_time > self._session_wait_timeout:
                     raise Exception(self.__class__.__name__,
-                                    'Session cannot start reboot after {} sec.'.format(self._session_wait_timeout))
+                                    "Session doesn't closed in {} sec as expected".format(self._session_wait_timeout))
                 session.send_line('')
                 time.sleep(1)
             except:
@@ -186,7 +186,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
             self.logger.info('Session type is \'{}\', closing session...'.format(self.session.session_type))
 
         if self.session.session_type.lower() != 'console':
-            self._wait_session_up(self.session)
+            self._wait_for_session_restore(self.session)
 
     def update_firmware(self, remote_host, file_path, size_of_firmware=200000000):
         """Update firmware version on device by loading provided image, performs following steps:
@@ -354,7 +354,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         else:
             is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
             if self.session.session_type.lower() != 'console':
-                self._wait_session_up(self.session)
+                self._wait_for_session_restore(self.session)
 
         if is_uploaded[0] is False:
             raise Exception('Cisco ASA', is_uploaded[1])
