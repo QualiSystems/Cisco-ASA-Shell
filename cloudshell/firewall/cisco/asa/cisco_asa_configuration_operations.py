@@ -283,7 +283,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         if not destination_host:
             destination_host = get_attribute_by_name('Backup Location')
             if not destination_host:
-                raise Exception('Cisco ASA', "Backup location or path is empty")
+                raise Exception('Cisco ASA', "Backup location or path can not be empty")
 
         system_name = re.sub('\s+', '_', self.resource_name)
         if len(system_name) > 23:
