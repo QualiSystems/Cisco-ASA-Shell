@@ -339,22 +339,24 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         if source_file == '':
             raise Exception('Cisco ASA', "Source Path is empty.")
 
-        if (restore_method.lower() == 'override') and (destination_filename == 'startup-config'):
-            self.cli.send_command(command='del ' + destination_filename,
-                                  expected_map={'\?|[confirm]': lambda session: session.send_line('')})
-
+        if destination_filename == "startup-config" and restore_method.lower() == "override":
+            self.cli.send_command(command="write erase",
+                                  expected_map={'[confirm]|\?': lambda session: session.send_line('')})
             is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
-        elif (restore_method.lower() == 'override') and (destination_filename == 'running-config'):
-
+        elif destination_filename == "startup-config" and restore_method.lower() == "append":
+            is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
+        elif destination_filename == "running-config" and restore_method.lower() == "override":
             if not self._check_replace_command():
                 raise Exception('Overriding running-config is not supported for this device.')
 
             self.configure_replace(source_filename=source_file)
             is_uploaded = (True, '')
-        else:
+        elif destination_filename == "running-config" and restore_method.lower() == "append":
             is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
             if self.session.session_type.lower() != 'console':
                 self._wait_for_session_restore(self.session)
+        else:
+            is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
 
         if is_uploaded[0] is False:
             raise Exception('Cisco ASA', is_uploaded[1])
