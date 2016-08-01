@@ -109,11 +109,17 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         expected_map[r'\?'] = lambda session: session.send_line('')
         expected_map[r'bytes'] = lambda session: session.send_line('')
 
-        self.session.hardware_expect(data_str=copy_command_str,
-                                     expect_map=expected_map,
-                                     re_string="Accessing|{}".format(self._default_prompt))
+        error_map = OrderedDict()
+        error_map[r'FAIL|[Ff]ail|ERROR|[Ee]rror'] = "Copy command failed"
 
-        return True, ""
+        try:
+            self.session.hardware_expect(data_str=copy_command_str,
+                                         expect_map=expected_map,
+                                         error_map=error_map,
+                                         re_string="Accessing|{}".format(self._default_prompt))
+            return True, ""
+        except Exception, err:
+            return False, err.message
 
     def _wait_for_session_restore(self, session):
         self.logger.debug('Waiting session up')
