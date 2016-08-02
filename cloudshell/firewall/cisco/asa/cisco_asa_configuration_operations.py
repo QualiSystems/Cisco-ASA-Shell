@@ -64,7 +64,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
     def session(self):
         return inject.instance(SESSION)
 
-    def copy(self, source_file='', destination_file='', timeout=600, retries=5):
+    def copy(self, source_file='', destination_file=''):
         """Copy file from device to tftp or vice versa, as well as copying inside devices filesystem
 
         :param source_file: source file.
@@ -98,7 +98,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         if host and not validateIP(host):
             raise Exception('Cisco ASA', 'Copy method: \'{}\' is not valid remote ip.'.format(host))
 
-        copy_command_str = 'copy {0} {1}'.format(source_file, destination_file)
+        copy_command_str = 'copy /noconfirm {0} {1}'.format(source_file, destination_file)
 
         if host:
             expected_map[r"{}[^/]".format(host)] = lambda session: session.send_line('')
@@ -110,19 +110,35 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         expected_map[r'bytes'] = lambda session: session.send_line('')
 
         error_map = OrderedDict()
+        error_map[r"Invalid input detected"] = "Invalid input detected"
         error_map[r'FAIL|[Ff]ail|ERROR|[Ee]rror'] = "Copy command failed"
 
         try:
             self.session.hardware_expect(data_str=copy_command_str,
                                          expect_map=expected_map,
                                          error_map=error_map,
-                                         re_string="Accessing|{}".format(self._default_prompt))
+                                         re_string="Previous instance shut down|{}".format(self._default_prompt))
             return True, ""
         except Exception, err:
-            return False, err.message
+            if "/noconfirm" in copy_command_str and "Invalid input detected" in err.args[1]:
+
+                self.logger.debug("Copy command doesn't support /noconfirm key."
+                                  "Try to run copy command without /noconfirm key")
+
+                copy_command_str = 'copy {0} {1}'.format(source_file, destination_file)
+                try:
+                    self.session.hardware_expect(data_str=copy_command_str,
+                                                 expect_map=expected_map,
+                                                 error_map=error_map,
+                                                 re_string="Previous instance shut down|{}".format(self._default_prompt))
+                    return True, ""
+                except Exception, err:
+                    return False, err.args
+            else:
+                return False, err.args
 
     def _wait_for_session_restore(self, session):
-        self.logger.debug('Waiting session up')
+        self.logger.debug('Waiting session restore')
         waiting_reboot_time = time.time()
         while True:
             try:
@@ -217,8 +233,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
 
         free_memory_size = self._get_free_memory_size('boot flash')
 
-        is_downloaded = self.copy(source_file=remote_host,
-                                  destination_file='flash:/' + file_path, timeout=600, retries=2)
+        is_downloaded = self.copy(source_file=remote_host, destination_file='flash:/' + file_path)
 
         if not is_downloaded[0]:
             raise Exception('Cisco ASA', "Failed to download firmware from " + remote_host +
@@ -345,11 +360,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         if source_file == '':
             raise Exception('Cisco ASA', "Source Path is empty.")
 
-        if destination_filename == "startup-config" and restore_method.lower() == "override":
-            self.cli.send_command(command="write erase",
-                                  expected_map={'[confirm]|\?': lambda session: session.send_line('')})
-            is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
-        elif destination_filename == "startup-config" and restore_method.lower() == "append":
+        if destination_filename == "startup-config":
             is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
         elif destination_filename == "running-config" and restore_method.lower() == "override":
             if not self._check_replace_command():
@@ -359,20 +370,18 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
             is_uploaded = (True, '')
         elif destination_filename == "running-config" and restore_method.lower() == "append":
             is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
-            if self.session.session_type.lower() != 'console':
+            if is_uploaded[0] and self.session.session_type.lower() != 'console':
                 self._wait_for_session_restore(self.session)
         else:
             is_uploaded = self.copy(source_file=source_file, destination_file=destination_filename)
 
-        if is_uploaded[0] is False:
+        if not is_uploaded[0]:
+            self.logger.error("Cisco ASA. Restore {0} from {1} failed: {2}".format(config_type,
+                                                                                   source_file,
+                                                                                   is_uploaded[1]))
             raise Exception('Cisco ASA', is_uploaded[1])
 
-        is_downloaded = (True, '')
-
-        if is_downloaded[0] is True:
-            return 'Restore configuration completed.'
-        else:
-            raise Exception('Cisco ASA', is_downloaded[1])
+        return 'Restore configuration completed.'
 
     def _check_replace_command(self):
         """
