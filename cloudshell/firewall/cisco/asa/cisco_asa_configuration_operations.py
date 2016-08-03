@@ -348,7 +348,7 @@ class CiscoASAConfigurationOperations(ConfigurationOperationsInterface, Firmware
         if '-config' not in config_type:
             config_type = config_type.lower() + '-config'
 
-        self.logger.info('Restore({}) device configuration from {}'.format(restore_method, source_file))
+        self.logger.info('Restore device configuration from {}'.format(source_file))
 
         match_data = re.search(r'startup-config|running-config', config_type)
         if not match_data:

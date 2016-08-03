@@ -18,13 +18,13 @@ def send_default_actions(session):
 
     :return:
     """
-
-    enter_enable_mode(session=session)
-    session.hardware_expect('terminal pager 0', ENABLE_PROMPT)
-    session.hardware_expect(ENTER_CONFIG_MODE_PROMPT_COMMAND, CONFIG_MODE_PROMPT)
-    session.hardware_expect('no logging console', CONFIG_MODE_PROMPT)
-    session.hardware_expect('exit', DEFAULT_PROMPT + '|' + ENABLE_PROMPT)
-
+    out = ''
+    out += enter_enable_mode(session=session)
+    out += session.hardware_expect('terminal pager 0', ENABLE_PROMPT)
+    out += session.hardware_expect(ENTER_CONFIG_MODE_PROMPT_COMMAND, CONFIG_MODE_PROMPT)
+    out += session.hardware_expect('no logging console', CONFIG_MODE_PROMPT)
+    out += session.hardware_expect('exit', DEFAULT_PROMPT + '|' + ENABLE_PROMPT)
+    return out
 
 ENTER_CONFIG_MODE_PROMPT_COMMAND = 'configure terminal'
 EXIT_CONFIG_MODE_PROMPT_COMMAND = 'exit'
@@ -40,6 +40,7 @@ def enter_enable_mode(session):
     if not re.search(ENABLE_PROMPT, result):
         raise Exception('enter_enable_mode', 'Enable password is incorrect')
 
+    return result
 
 CONFIGURATION_OPERATIONS_CLASS = CiscoASAConfigurationOperations
 FIRMWARE_OPERATIONS_CLASS = CiscoASAConfigurationOperations
