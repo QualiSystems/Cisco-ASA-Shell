@@ -10,6 +10,8 @@ from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterf
 
 import cloudshell.firewall.cisco.asa.cisco_asa_configuration as driver_config
 
+SPLITTER = "-"*60
+
 
 class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInterface):
     def __init__(self):
@@ -20,6 +22,7 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
     @context_from_args
     def initialize(self, context):
         """Initialize method
+
         :type context: cloudshell.shell.core.context.driver_context.InitCommandContext
         """
 
@@ -42,6 +45,14 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
         """
 
         configuration_operations = inject.instance('configuration_operations')
+        configuration_operations.logger.info("{splitter}\nRun method 'Restore' with parameters:"
+                                             "path = {path},\n"
+                                             "config_type = {config_type},\n"
+                                             "restore_method = {restore_method}\n"
+                                             "{splitter}".format(splitter=SPLITTER,
+                                                                 path=path,
+                                                                 config_type=config_type,
+                                                                 restore_method=restore_method))
         response = configuration_operations.restore_configuration(source_file=path, restore_method=restore_method,
                                                                   config_type=config_type)
         configuration_operations.logger.info('Restore completed')
@@ -56,6 +67,12 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
         """
 
         configuration_operations = inject.instance('configuration_operations')
+        configuration_operations.logger.info("{splitter}\nRun method 'Save' with parameters:\n"
+                                             "destination_host = {destination_host},\n"
+                                             "source_filename = {source_filename}\n"
+                                             "{splitter}".format(splitter=SPLITTER,
+                                                                 destination_host=destination_host,
+                                                                 source_filename=source_filename))
         response = configuration_operations.save_configuration(destination_host, source_filename)
         configuration_operations.logger.info('Save completed')
         return response
@@ -84,6 +101,12 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
         """
 
         firmware_operations = inject.instance("firmware_operations")
+        firmware_operations.logger.info("{splitter}\nRun method 'Load Firmware' with parameters:\n"
+                                        "remote_host = {remote_host},\n"
+                                        "file_path = {file_path}\n"
+                                        "{splitter}".format(splitter=SPLITTER,
+                                                            remote_host=remote_host,
+                                                            file_path=file_path))
         response = firmware_operations.update_firmware(remote_host=remote_host, file_path=file_path)
         firmware_operations.logger.info(response)
 
@@ -96,8 +119,9 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
         """
 
         send_command_operations = inject.instance("send_command_operations")
+        send_command_operations.logger.info("{splitter}\nRun method 'Send Custom Command' with parameters:\n"
+                                            "command = {command}\n{splitter}".format(splitter=SPLITTER, command=command))
         response = send_command_operations.send_command(command=command)
-        print response
         return response
 
     @context_from_args
@@ -107,7 +131,10 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
         :return: result
         :rtype: string
         """
+
         send_command_operations = inject.instance("send_command_operations")
+        send_command_operations.logger.info("{splitter}\nRun method 'Send Custom Config Command' with parameters:\n"
+                                            "command = {command}\n{splitter}".format(splitter=SPLITTER, command=command))
         result_str = send_command_operations.send_config_command(command=command)
         return result_str
 
