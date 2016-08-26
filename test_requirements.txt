@@ -1,3 +1,0 @@
-cloudshell-firewall-core
-cloudshell-snmp
-cloudshell-cli
