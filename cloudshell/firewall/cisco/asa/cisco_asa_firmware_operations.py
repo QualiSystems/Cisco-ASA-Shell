@@ -9,8 +9,9 @@ from collections import OrderedDict
 
 from cloudshell.configuration.cloudshell_cli_binding_keys import CLI_SERVICE, SESSION
 from cloudshell.configuration.cloudshell_shell_core_binding_keys import LOGGER, API
-from cloudshell.firewall.networking_utils import validateIP
-from cloudshell.firewall.operations.configuration_operations import ConfigurationOperations
+from cloudshell.firewall.cisco.asa.firmware_data.cisco_asa_firmware_data import CiscoASAFirmwareData
+from cloudshell.firewall.networking_utils import validateIP, UrlParser
+from cloudshell.firewall.operations.interfaces.firmware_operations_interface import FirmwareOperationsInterface
 from cloudshell.shell.core.config_utils import override_attributes_from_config
 from cloudshell.shell.core.context_utils import get_resource_name
 
@@ -19,7 +20,7 @@ def _get_time_stamp():
     return time.strftime("%d%m%y-%H%M%S", time.localtime())
 
 
-class CiscoASAConfigurationOperations(ConfigurationOperations):
+class CiscoASAFirmwareOperations(FirmwareOperationsInterface):
     SESSION_WAIT_TIMEOUT = 600
     DEFAULT_PROMPT = r'[>$#]\s*$'
 
@@ -27,11 +28,11 @@ class CiscoASAConfigurationOperations(ConfigurationOperations):
         self._cli_service = cli_service
         self._logger = logger
         self._api = api
-        overridden_config = override_attributes_from_config(CiscoASAConfigurationOperations)
+        overridden_config = override_attributes_from_config(CiscoASAFirmwareOperations)
         self._session_wait_timeout = overridden_config.SESSION_WAIT_TIMEOUT
         self._default_prompt = overridden_config.DEFAULT_PROMPT
         try:
-            self._resource_name = resource_name
+            self.resource_name = resource_name or get_resource_name()
         except Exception:
             raise Exception('CiscoASAHandlerBase', 'ResourceName is empty or None')
 
@@ -51,21 +52,11 @@ class CiscoASAConfigurationOperations(ConfigurationOperations):
     def session(self):
         return inject.instance(SESSION)
 
-    @property
-    def resource_name(self):
-        if self._resource_name is None:
-            try:
-                self._resource_name = get_resource_name()
-            except:
-                raise Exception(self.__class__.__name__, 'Failed to get resource name.')
-        return self._resource_name
-
     def copy(self, source_file='', destination_file=''):
         """Copy file from device to tftp or vice versa, as well as copying inside devices filesystem
 
         :param source_file: source file.
         :param destination_file: destination file.
-
         :return tuple(True or False, 'Success or Error message')
         """
 
@@ -161,35 +152,6 @@ class CiscoASAConfigurationOperations(ConfigurationOperations):
             except:
                 time.sleep(5)
 
-    def configure_replace(self, source_filename):
-        """Replace config on target device with specified one
-
-        :param source_filename: full path to the file which will replace current running-config
-        """
-
-        backup = "flash:backup-sc"
-        config_name = "startup-config"
-
-        if not source_filename:
-            raise Exception('Cisco ASA', "Configure replace method doesn't have source filename!")
-
-        self.logger.debug("Start backup process for '{0}' config".format(config_name))
-        backup_done = self.copy(source_file=config_name, destination_file=backup)
-        if not backup_done[0]:
-            raise Exception("Cisco ASA", "Failed to backup {0} config. Check if flash has enough free space"
-                            .format(config_name))
-        self.logger.debug("Backup completed successfully")
-
-        self.logger.debug("Start reloading {0} from {1}".format(config_name, source_filename))
-        is_uploaded = self.copy(source_file=source_filename, destination_file=config_name)
-        if not is_uploaded[0]:
-            self.logger.debug("Failed to reload {0}: {1}".format(config_name, is_uploaded[1]))
-            self.logger.debug("Restore startup-configuration from backup")
-            self.copy(source_file=backup, destination_file=config_name)
-            raise Exception(is_uploaded[1])
-        self.logger.debug("Reloading startup-config successfully")
-        self.reload()
-
     def reload(self):
         """ Reload device """
 
@@ -207,13 +169,78 @@ class CiscoASAConfigurationOperations(ConfigurationOperations):
         if self.session.session_type.lower() != 'console':
             self._wait_for_session_restore(self.session)
 
+    def load_firmware(self, path, vrf_management_name=None):
+        """Update firmware version on device by loading provided image, performs following steps:
+            1. Copy bin file from remote tftp server.
+            2. Clear in run config boot system section.
+            3. Set downloaded bin file as boot file and then reboot device.
+            4. Check if firmware was successfully installed.
+        :param path: full path to firmware file on ftp/tftp location
+        :param vrf_management_name: VRF Name
+        :return: status / exception
+        """
+
+        url = UrlParser.parse_url(path)
+        required_keys = [UrlParser.FILENAME, UrlParser.HOSTNAME, UrlParser.SCHEME]
+
+        if not url or not all(key in url for key in required_keys):
+            raise Exception('Cisco ASA', 'Path is wrong or empty')
+
+        file_name = url[UrlParser.FILENAME]
+        firmware_obj = CiscoASAFirmwareData(path)
+
+        if firmware_obj.get_name() is None:
+            raise Exception('Cisco ASA', "Invalid firmware name!\n \
+                                Firmware file must have: title, extension.\n \
+                                Example: isr4400-universalk9.03.10.00.S.153-3.S-ext.SPA.bin\n\n \
+                                Current path: {}".format(file_name))
+
+        is_downloaded = self.copy(source_file=path, destination_file='flash:/{}'.format(file_name))
+
+        if not is_downloaded[0]:
+            raise Exception('Cisco ASA', "Failed to download firmware from {}!\n {}".format(path, is_downloaded[1]))
+
+        self.cli_service.send_command(command='configure terminal', expected_str='(config)#')
+        self._remove_old_boot_system_config()
+        output = self.cli_service.send_command('do show run | include boot')
+
+        is_boot_firmware = False
+        firmware_full_name = firmware_obj.get_name() + '.' + firmware_obj.get_extension()
+
+        retries = 5
+        while (not is_boot_firmware) and (retries > 0):
+            self.cli_service.send_command(command='boot system flash flash:' + firmware_full_name,
+                                          expected_str='(config)#')
+            self.cli_service.send_command(command='config-reg 0x2102', expected_str='(config)#')
+
+            output = self.cli_service.send_command('do show run | include boot')
+
+            retries -= 1
+            is_boot_firmware = output.find(firmware_full_name) != -1
+
+        if not is_boot_firmware:
+            raise Exception('Cisco ASA', "Can't add firmware '" + firmware_full_name + "' for boot!")
+
+        self.cli_service.send_command(command='exit')
+        output = self.cli_service.send_command(command='copy run start',
+                                               expected_map={'\?': lambda session: session.send_line('')})
+
+        self.reload()
+        output_version = self.cli_service.send_command(command='show version | include image file')
+
+        is_firmware_installed = output_version.find(firmware_full_name)
+        if is_firmware_installed != -1:
+            return 'Update firmware completed successfully!'
+        else:
+            raise Exception('Cisco ASA', 'Update firmware failed!')
+
     def _get_resource_attribute(self, resource_full_path, attribute_name):
         """Get resource attribute by provided attribute_name
 
         :param resource_full_path: resource name or full name
         :param attribute_name: name of the attribute
-
         :return: attribute value
+        :rtype: string
         """
 
         try:
@@ -222,112 +249,44 @@ class CiscoASAConfigurationOperations(ConfigurationOperations):
             raise Exception(e.message)
         return result
 
-    def save(self, folder_path, configuration_type, vrf_management_name=None):
-        """Backup 'startup-config' or 'running-config' from device to provided file_system [ftp|tftp]
-        Also possible to backup config to localhost
-
-        :param folder_path:  tftp/ftp server where file be saved
-        :param configuration_type: what file to backup
-        :param vrf_management_name: what file to backup
-
-        :return: status message / exception
+    def _remove_old_boot_system_config(self):
+        """Clear boot system parameters in current configuration
         """
 
-        if configuration_type == '':
-            configuration_type = 'running-config'
-        if '-config' not in configuration_type:
-            configuration_type = configuration_type.lower() + '-config'
-        if ('startup' not in configuration_type) and ('running' not in configuration_type):
-            raise Exception('Cisco ASA', "Source filename must be 'startup' or 'running'!")
+        data = self.cli_service.send_command('do show run | include boot')
+        start_marker_str = 'boot-start-marker'
+        index_begin = data.find(start_marker_str)
+        index_end = data.find('boot-end-marker')
 
-        folder_path = self.get_path(folder_path)
+        if index_begin == -1 or index_end == -1:
+            return
 
-        system_name = re.sub('\s+', '_', self.resource_name)
-        if len(system_name) > 23:
-            system_name = system_name[:23]
+        data = data[index_begin + len(start_marker_str):index_end]
+        data_list = data.split('\n')
 
-        destination_filename = '{0}-{1}-{2}'.format(system_name, configuration_type.replace('-config', ''),
-                                                    _get_time_stamp())
-        self.logger.info('destination filename is {0}'.format(destination_filename))
+        for line in data_list:
+            if line.find('boot system') != -1:
+                self.cli_service.send_command(command='no ' + line, expected_str='(config)#')
 
-        if len(folder_path) <= 0:
-            folder_path = self._get_resource_attribute(self.resource_name, 'Backup Location')
-            if len(folder_path) <= 0:
-                raise Exception('Folder path and Backup Location are empty.')
+    def _get_free_memory_size(self, partition):
+        """Get available memory size on provided partition
 
-        if folder_path.endswith('/'):
-            destination_file = folder_path + destination_filename
+        :param partition: file system
+        :return: size of free memory in bytes
+        """
+
+        cmd = 'dir {0}:'.format(partition)
+        output = self.cli_service.send_command(command=cmd, retries=100)
+
+        find_str = 'bytes total ('
+        position = output.find(find_str)
+        if position != -1:
+            size_str = output[(position + len(find_str)):]
+
+            size_match = re.match(r'[0-9]*', size_str)
+            if size_match:
+                return int(size_match.group())
+            else:
+                return -1
         else:
-            destination_file = folder_path + '/' + destination_filename
-
-        is_uploaded = self.copy(destination_file=destination_file, source_file=configuration_type)
-        if is_uploaded[0] is True:
-            self.logger.info('Save configuration completed.')
-            return '{0},'.format(destination_filename)
-        else:
-            self.logger.info('Save configuration failed with errors: {0}'.format(is_uploaded[1]))
-            raise Exception(is_uploaded[1])
-
-    def restore(self, path, configuration_type, restore_method, vrf_management_name=None):
-        """ Restore configuration on device from remote server
-
-        :param path: Full path to configuration file on remote server
-        :param configuration_type: Type of configuration to restore. supports running and startup configuration
-        :param restore_method: Type of restore method. Supports append and override. By default is override
-        :param vrf_management_name:
-
-        :return Successful message or Exception
-        """
-
-        if not restore_method:
-            restore_method = "override"
-
-        if not re.search(r'append|override', restore_method.lower()):
-            raise Exception('Cisco ASA',
-                            "Restore method '{}' is wrong! Use 'Append' or 'Override'".format(restore_method))
-
-        if '-config' not in configuration_type:
-            configuration_type = configuration_type.lower() + '-config'
-
-        self.logger.info('Restore device configuration from {}'.format(path))
-
-        match_data = re.search(r'startup-config|running-config', configuration_type)
-        if not match_data:
-            msg = "Configuration type '{}' is wrong, use 'startup-config' or 'running-config'.".format(configuration_type)
-            raise Exception('Cisco ASA', msg)
-
-        destination_filename = match_data.group()
-
-        if path == '':
-            raise Exception('Cisco ASA', "Source Path is empty.")
-
-        if destination_filename == "startup-config":
-            is_uploaded = self.copy(source_file=path, destination_file=destination_filename)
-        elif destination_filename == "running-config" and restore_method.lower() == "override":
-            if not self._check_replace_command():
-                raise Exception('Overriding running-config is not supported for this device.')
-
-            self.configure_replace(source_filename=path)
-            is_uploaded = (True, '')
-        elif destination_filename == "running-config" and restore_method.lower() == "append":
-            is_uploaded = self.copy(source_file=path, destination_file=destination_filename)
-            if is_uploaded[0] and self.session.session_type.lower() != 'console':
-                self._wait_for_session_restore(self.session)
-        else:
-            is_uploaded = self.copy(source_file=path, destination_file=destination_filename)
-
-        if not is_uploaded[0]:
-            self.logger.error("Cisco ASA. Restore {0} from {1} failed: {2}".format(configuration_type,
-                                                                                   path,
-                                                                                   is_uploaded[1]))
-            raise Exception('Cisco ASA', is_uploaded[1])
-
-        return 'Restore configuration completed.'
-
-    def _check_replace_command(self):
-        """
-        Checks whether replace command exist on device or not
-        For Cisco ASA devices always return True
-        """
-
-        return True
+            return -1

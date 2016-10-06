@@ -1,40 +1,54 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import re
-import os
-
 import inject
+import os
+import re
 
-from cloudshell.configuration.cloudshell_shell_core_binding_keys import LOGGER
+
+from cloudshell.configuration.cloudshell_cli_binding_keys import CLI_SERVICE
+from cloudshell.configuration.cloudshell_shell_core_binding_keys import LOGGER, CONFIG
 from cloudshell.configuration.cloudshell_snmp_binding_keys import SNMP_HANDLER
 from cloudshell.firewall.operations.interfaces.autoload_operations_interface import AutoloadOperationsInterface
 from cloudshell.firewall.autoload.firewall_autoload_resource_structure import Port, PortChannel, PowerPort, \
     Chassis, Module
 from cloudshell.firewall.autoload.firewall_autoload_resource_attributes import FirewallStandardRootAttributes
+from cloudshell.shell.core.config_utils import override_attributes_from_config
+from cloudshell.shell.core.context_utils import get_attribute_by_name
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.snmp.quali_snmp import QualiMibTable
 
 
 class CiscoASASNMPAutoload(AutoloadOperationsInterface):
+    SUPPORTED_OS = ["A(daptive)? ?S(ecurity)? ?A(ppliance)?"]
     IF_ENTITY = "ifName"
     ENTITY_PHYSICAL = "entPhysicalName"
 
-    def __init__(self, snmp_handler=None, logger=None, supported_os=None):
+    def __init__(self, snmp_handler=None, logger=None, config=None, cli_service=None, snmp_community=None):
         """Basic init with injected snmp handler and logger
 
         :param snmp_handler:
         :param logger:
         :return:
         """
-
+        self._config = config
         self._snmp = snmp_handler
         self._logger = logger
+        self._enable_snmp = True
+        self._disable_snmp = False
+        self.snmp_community = snmp_community
+        if not self.snmp_community:
+            self.snmp_community = get_attribute_by_name("SNMP Read Community") or "quali"
+        self._cli_service = cli_service
+
+        """Override attributes from global config"""
+        overridden_config = override_attributes_from_config(CiscoASASNMPAutoload, config=self.config)
+        self._supported_os = overridden_config.SUPPORTED_OS
+
         self.exclusion_list = []
         self._excluded_models = []
         self.module_list = []
         self.chassis_list = []
-        self.supported_os = supported_os
         self.port_list = []
         self.power_supply_list = []
         self.relative_path = {}
@@ -47,11 +61,11 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
 
     @property
     def logger(self):
-        if self._logger:
-            logger = self._logger
-        else:
-            logger = inject.instance(LOGGER)
-        return logger
+        return self._logger or inject.instance(LOGGER)
+
+    @property
+    def config(self):
+        return self._config or inject.instance(CONFIG)
 
     @property
     def snmp(self):
@@ -59,11 +73,51 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
             self._snmp = inject.instance(SNMP_HANDLER)
         return self._snmp
 
+    @property
+    def cli_service(self):
+        return self._cli_service or inject.instance(CLI_SERVICE)
+
     def load_cisco_mib(self):
         path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'mibs'))
         self.snmp.update_mib_sources(path)
 
+    def enable_snmp(self):
+        existing_snmp_community = self.snmp_community in self.cli_service.send_command("more system:running-config | inc snmp-server community").lower()
+
+        if not existing_snmp_community:
+            self.cli_service.send_config_command('snmp-server community {0}'.format(self.snmp_community))
+        self.cli_service.commit()
+
+    def disable_snmp(self):
+        self.cli_service.send_config_command('no snmp-server community {0}'.format(self.snmp_community))
+        self.cli_service.commit()
+
     def discover(self):
+        """
+        General entry point for autoload
+
+        :return: AutoLoadDetails object or Exception
+        """
+
+        try:
+            self._enable_snmp = (get_attribute_by_name('Enable SNMP') or 'true').lower() == 'true'
+            self._disable_snmp = (get_attribute_by_name('Disable SNMP') or 'false').lower() == 'true'
+        except:
+            pass
+
+        if self._enable_snmp:
+            self.enable_snmp()
+
+        try:
+            return self._get_autoload_details()
+        except Exception as e:
+            self.logger.error('Autoload failed: {0}'.format(e.message))
+            raise Exception(self.__class__.__name__, e.message)
+        finally:
+            if self._disable_snmp:
+                self.disable_snmp()
+
+    def _get_autoload_details(self):
         """General entry point for autoload,
         read device structure and attributes: chassis, modules, submodules, ports, port-channels and power supplies
 
@@ -126,11 +180,8 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
         """
 
         version = None
-        if not self.supported_os:
-            config = inject.instance('config')
-            self.supported_os = config.SUPPORTED_OS
         system_description = self.snmp.get(('SNMPv2-MIB', 'sysDescr'))['sysDescr']
-        res = re.search(r"({0})".format("|".join(self.supported_os)),
+        res = re.search(r"({0})".format("|".join(self._supported_os)),
                         system_description,
                         flags=re.DOTALL | re.IGNORECASE)
         if res:
@@ -141,7 +192,7 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
         self.logger.info('Detected system description: \'{0}\''.format(system_description))
 
         error_message = 'Incompatible driver! Please use this driver for \'{0}\' operation system(s)'. \
-            format(str(tuple(self.supported_os)))
+            format(str(tuple(self._supported_os)))
         self.logger.error(error_message)
         raise Exception(error_message)
 
