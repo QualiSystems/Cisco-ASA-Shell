@@ -222,13 +222,12 @@ class CiscoASAConfigurationOperations(ConfigurationOperations):
             raise Exception(e.message)
         return result
 
-    def save(self, folder_path, configuration_type, vrf_management_name=None):
+    def save(self, folder_path, configuration_type):
         """Backup 'startup-config' or 'running-config' from device to provided file_system [ftp|tftp]
         Also possible to backup config to localhost
 
         :param folder_path:  tftp/ftp server where file be saved
         :param configuration_type: what file to backup
-        :param vrf_management_name: what file to backup
 
         :return: status message / exception
         """
@@ -268,13 +267,12 @@ class CiscoASAConfigurationOperations(ConfigurationOperations):
             self.logger.info('Save configuration failed with errors: {0}'.format(is_uploaded[1]))
             raise Exception(is_uploaded[1])
 
-    def restore(self, path, configuration_type, restore_method, vrf_management_name=None):
+    def restore(self, path, configuration_type, restore_method):
         """ Restore configuration on device from remote server
 
         :param path: Full path to configuration file on remote server
         :param configuration_type: Type of configuration to restore. supports running and startup configuration
         :param restore_method: Type of restore method. Supports append and override. By default is override
-        :param vrf_management_name:
 
         :return Successful message or Exception
         """

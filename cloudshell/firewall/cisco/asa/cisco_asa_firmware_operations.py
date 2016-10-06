@@ -169,14 +169,15 @@ class CiscoASAFirmwareOperations(FirmwareOperationsInterface):
         if self.session.session_type.lower() != 'console':
             self._wait_for_session_restore(self.session)
 
-    def load_firmware(self, path, vrf_management_name=None):
+    def load_firmware(self, path):
         """Update firmware version on device by loading provided image, performs following steps:
             1. Copy bin file from remote tftp server.
             2. Clear in run config boot system section.
             3. Set downloaded bin file as boot file and then reboot device.
             4. Check if firmware was successfully installed.
+
         :param path: full path to firmware file on ftp/tftp location
-        :param vrf_management_name: VRF Name
+
         :return: status / exception
         """
 

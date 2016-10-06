@@ -118,28 +118,24 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
                                                                                              command=custom_command))
         return self.__run_command_operations.run_custom_config_command(custom_command)
 
-    def load_firmware(self, context, path, vrf_management_name=None):
+    def load_firmware(self, context, path):
         """Upload and updates firmware on the resource
 
         :param path: full path to firmware file, i.e.tftp://10.10.10.1/firmware.bin
-        :param vrf_management_name: VRF management Name
         :return: result
         """
 
         self.__firmware_operations.logger.info("{splitter}\nRun method 'Load Firmware' with parameters:\n"
-                                               "path = {path},\n"
-                                               "vrf_management_name = {vrf_management_name}\n"
+                                               "path = {path}\n"
                                                "{splitter}".format(splitter=SPLITTER,
-                                                                   path=path,
-                                                                   vrf_management_name=vrf_management_name))
-        return self.__firmware_operations.load_firmware(path, vrf_management_name)
+                                                                   path=path))
+        return self.__firmware_operations.load_firmware(path)
 
-    def save(self, context, folder_path, configuration_type="running", vrf_management_name=None):
+    def save(self, context, folder_path, configuration_type="running"):
         """Save selected file to the provided destination
 
         :param configuration_type: source file, which will be saved
         :param folder_path: destination path where file will be saved
-        :param vrf_management_name: VRF management Name
         :return saved configuration file name
         """
 
@@ -153,13 +149,12 @@ class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInte
                                                                         configuration_type=configuration_type))
         return self.__configuration_operations.save(folder_path=folder_path, configuration_type=configuration_type)
 
-    def restore(self, context, path, configuration_type="running", restore_method="override", vrf_management_name=None):
+    def restore(self, context, path, configuration_type="running", restore_method="override"):
         """ Restore selected file to the provided destination
 
         :param path: source config file
         :param configuration_type: running or startup configs
         :param restore_method: append or override methods
-        :param vrf_management_name: VRF management Name
         """
 
         if not configuration_type:
