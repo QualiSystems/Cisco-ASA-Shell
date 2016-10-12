@@ -38,7 +38,7 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
         self._disable_snmp = False
         self.snmp_community = snmp_community
         if not self.snmp_community:
-            self.snmp_community = get_attribute_by_name("SNMP Read Community") or "quali"
+            self.snmp_community = get_attribute_by_name("SNMP Read Community")
         self._cli_service = cli_service
 
         """Override attributes from global config"""
@@ -98,6 +98,9 @@ class CiscoASASNMPAutoload(AutoloadOperationsInterface):
 
         :return: AutoLoadDetails object or Exception
         """
+
+        if not self.snmp_community:
+            raise Exception(self.__class__.__name__, "SNMP Read Community shouldn't be empty")
 
         try:
             self._enable_snmp = (get_attribute_by_name('Enable SNMP') or 'true').lower() == 'true'

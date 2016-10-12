@@ -85,7 +85,7 @@
                 <Rule Name="Available For Abstract Resources"/>
             </Rules>
         </AttributeInfo>
-        <AttributeInfo Name="SNMP Read Community" Description="The SNMP Read-Only Community String is like a password. It is sent along with each SNMP Get-Request and allows (or denies) access to device." Type="String" DefaultValue="" IsReadOnly="false">
+        <AttributeInfo Name="SNMP Read Community" Description="The SNMP Read-Only Community String is like a password. It is sent along with each SNMP Get-Request and allows (or denies) access to device." Type="String" DefaultValue="Quali" IsReadOnly="false">
             <Rules>
                 <Rule Name="Configuration"/>
             </Rules>
@@ -361,7 +361,7 @@
                         <AttributeValue Name="Backup Password" Value="3M3u7nkDzxWb0aJ/IZYeWw=="/>
                         <AttributeValue Name="Backup Type" Value="File System"/>
                         <AttributeValue Name="Model" Value=""/>
-                        <AttributeValue Name="SNMP Read Community" Value=""/>
+                        <AttributeValue Name="SNMP Read Community" Value="Quali"/>
                         <AttributeValue Name="SNMP V3 Password" Value=""/>
                         <AttributeValue Name="SNMP V3 Private Key" Value=""/>
                         <AttributeValue Name="SNMP V3 User" Value=""/>

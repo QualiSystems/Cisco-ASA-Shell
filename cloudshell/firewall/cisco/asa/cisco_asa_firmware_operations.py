@@ -5,12 +5,12 @@ import inject
 import re
 import time
 
-from collections import OrderedDict
-
-from cloudshell.configuration.cloudshell_cli_binding_keys import CLI_SERVICE, SESSION
+from cloudshell.configuration.cloudshell_cli_binding_keys import CLI_SERVICE
 from cloudshell.configuration.cloudshell_shell_core_binding_keys import LOGGER, API
+from cloudshell.firewall.cisco.asa.cisco_asa_state_operations import CiscoASAStateOperations
+from cloudshell.firewall.cisco.asa.cisco_asa_configuration_operations import CiscoASAConfigurationOperations
 from cloudshell.firewall.cisco.asa.firmware_data.cisco_asa_firmware_data import CiscoASAFirmwareData
-from cloudshell.firewall.networking_utils import validateIP, UrlParser
+from cloudshell.firewall.networking_utils import UrlParser
 from cloudshell.firewall.operations.interfaces.firmware_operations_interface import FirmwareOperationsInterface
 from cloudshell.shell.core.config_utils import override_attributes_from_config
 from cloudshell.shell.core.context_utils import get_resource_name
@@ -49,125 +49,12 @@ class CiscoASAFirmwareOperations(FirmwareOperationsInterface):
         return self._api or inject.instance(API)
 
     @property
-    def session(self):
-        return inject.instance(SESSION)
+    def state_operations(self):
+        return CiscoASAStateOperations()
 
-    def copy(self, source_file='', destination_file=''):
-        """Copy file from device to tftp or vice versa, as well as copying inside devices filesystem
-
-        :param source_file: source file.
-        :param destination_file: destination file.
-        :return tuple(True or False, 'Success or Error message')
-        """
-
-        host = None
-        expected_map = OrderedDict()
-
-        if '://' in source_file:
-            source_file_data_list = re.sub(r'/+', '/', source_file).split('/')
-            host = source_file_data_list[1]
-            expected_map[r'[^/]{}'.format(source_file_data_list[-1])] = lambda session: session.send_line('')
-            expected_map[r'[^/]{}'.format(destination_file)] = lambda session: session.send_line('')
-        elif '://' in destination_file:
-            destination_file_data_list = re.sub(r'/+', '/', destination_file).split('/')
-            host = destination_file_data_list[1]
-            expected_map[r'{}[^/]'.format(destination_file_data_list[-1])] = lambda session: session.send_line('')
-            expected_map[r'{}[^/]'.format(source_file)] = lambda session: session.send_line('')
-        elif "flash:" in source_file:
-            expected_map[r'{}[^/]'.format(source_file.split(":")[-1])] = lambda session: session.send_line('')
-            expected_map[r'{}[^/]'.format(destination_file)] = lambda session: session.send_line('')
-        elif "flash:" in destination_file:
-            expected_map[r'{}[^/]'.format(source_file)] = lambda session: session.send_line('')
-            expected_map[r'{}[^/]'.format(destination_file.split(":")[-1])] = lambda session: session.send_line('')
-        else:
-            expected_map[r'{}[^/]'.format(source_file)] = lambda session: session.send_line('')
-            expected_map[r'{}[^/]'.format(destination_file)] = lambda session: session.send_line('')
-
-        if host and not validateIP(host):
-            raise Exception('Cisco ASA', 'Copy method: \'{}\' is not valid remote ip.'.format(host))
-
-        copy_command_str = 'copy /noconfirm {0} {1}'.format(source_file, destination_file)
-
-        if host:
-            expected_map[r"{}[^/]".format(host)] = lambda session: session.send_line('')
-
-        expected_map[r'\[confirm\]'] = lambda session: session.send_line('')
-        expected_map[r'\(y/n\)'] = lambda session: session.send_line('y')
-        expected_map[r'\([Yy]es/[Nn]o\)'] = lambda session: session.send_line('yes')
-        expected_map[r'\?'] = lambda session: session.send_line('')
-        expected_map[r'bytes'] = lambda session: session.send_line('')
-
-        error_map = OrderedDict()
-        error_map[r"Invalid input detected"] = "Invalid input detected"
-        error_map[r'FAIL|[Ff]ail|ERROR|[Ee]rror'] = "Copy command failed"
-
-        try:
-            self.session.hardware_expect(data_str=copy_command_str,
-                                         expect_map=expected_map,
-                                         error_map=error_map,
-                                         re_string="Previous instance shut down|{}".format(self._default_prompt))
-            return True, ""
-        except Exception, err:
-            if "/noconfirm" in copy_command_str and "Invalid input detected" in err.args[1]:
-
-                self.logger.debug("Copy command doesn't support /noconfirm key."
-                                  "Try to run copy command without /noconfirm key")
-
-                copy_command_str = 'copy {0} {1}'.format(source_file, destination_file)
-                try:
-                    self.session.hardware_expect(data_str=copy_command_str,
-                                                 expect_map=expected_map,
-                                                 error_map=error_map,
-                                                 re_string="Previous instance shut down|{}".format(self._default_prompt))
-                    return True, ""
-                except Exception, err:
-                    return False, err.args
-            else:
-                return False, err.args
-
-    def _wait_for_session_restore(self, session):
-        self.logger.debug('Waiting session restore')
-        waiting_reboot_time = time.time()
-        while True:
-            try:
-                if time.time() - waiting_reboot_time > self._session_wait_timeout:
-                    raise Exception(self.__class__.__name__,
-                                    "Session doesn't closed in {} sec as expected".format(self._session_wait_timeout))
-                session.send_line('')
-                time.sleep(1)
-            except:
-                self.logger.debug('Session disconnected')
-                break
-        reboot_time = time.time()
-        while True:
-            if time.time() - reboot_time > self._session_wait_timeout:
-                self.cli_service.destroy_threaded_session(session=session)
-                raise Exception(self.__class__.__name__,
-                                'Session cannot connect after {} sec.'.format(self._session_wait_timeout))
-            try:
-                self.logger.debug('Reconnect retry')
-                session.connect(re_string=self._default_prompt)
-                self.logger.debug('Session connected')
-                break
-            except:
-                time.sleep(5)
-
-    def reload(self):
-        """ Reload device """
-
-        expected_map = {'[\[\(][Yy]es/[Nn]o[\)\]]|\[confirm\]': lambda session: session.send_line('yes'),
-                        '\(y\/n\)|continue': lambda session: session.send_line('y'),
-                        'reload': lambda session: session.send_line(''),
-                        '[\[\(][Yy]/[Nn][\)\]]': lambda session: session.send_line('y')
-                        }
-        try:
-            self.logger.info("Send 'reload' to device...")
-            self.cli_service.send_command(command='reload', expected_map=expected_map, timeout=3)
-        except Exception as e:
-            self.logger.info('Session type is \'{}\', closing session...'.format(self.session.session_type))
-
-        if self.session.session_type.lower() != 'console':
-            self._wait_for_session_restore(self.session)
+    @property
+    def configuration_operations(self):
+        return CiscoASAConfigurationOperations()
 
     def load_firmware(self, path):
         """Update firmware version on device by loading provided image, performs following steps:
@@ -196,7 +83,7 @@ class CiscoASAFirmwareOperations(FirmwareOperationsInterface):
                                 Example: isr4400-universalk9.03.10.00.S.153-3.S-ext.SPA.bin\n\n \
                                 Current path: {}".format(file_name))
 
-        is_downloaded = self.copy(source_file=path, destination_file='flash:/{}'.format(file_name))
+        is_downloaded = self.configuration_operations.copy(source_file=path, destination_file='flash:/{}'.format(file_name))
 
         if not is_downloaded[0]:
             raise Exception('Cisco ASA', "Failed to download firmware from {}!\n {}".format(path, is_downloaded[1]))
@@ -226,7 +113,7 @@ class CiscoASAFirmwareOperations(FirmwareOperationsInterface):
         output = self.cli_service.send_command(command='copy run start',
                                                expected_map={'\?': lambda session: session.send_line('')})
 
-        self.reload()
+        self.state_operations.reload()
         output_version = self.cli_service.send_command(command='show version | include image file')
 
         is_firmware_installed = output_version.find(firmware_full_name)

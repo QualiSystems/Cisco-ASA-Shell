@@ -58,7 +58,8 @@ class CiscoASAStateOperations(StateOperations):
             try:
                 if time.time() - waiting_reboot_time > self._session_wait_timeout:
                     raise Exception(self.__class__.__name__,
-                                    "Session doesn't closed in {} sec as expected".format(self._session_wait_timeout))
+                                    "{0} session didn't close in {1} sec as expected".format(self.session.session_type,
+                                                                                             self._session_wait_timeout))
                 session.send_line('')
                 time.sleep(1)
             except:
@@ -69,9 +70,10 @@ class CiscoASAStateOperations(StateOperations):
             if time.time() - reboot_time > self._session_wait_timeout:
                 self.cli.destroy_threaded_session(session=session)
                 raise Exception(self.__class__.__name__,
-                                'Session cannot connect after {} sec.'.format(self._session_wait_timeout))
+                                'Failed to reconnect {0} session after {1} sec'.format(self.session.session_type,
+                                                                                       self._session_wait_timeout))
             try:
-                self.logger.debug('Reconnect retry')
+                self.logger.debug('Trying to reconnect ...')
                 session.connect(re_string=self._default_prompt)
                 self.logger.debug('Session connected')
                 break
