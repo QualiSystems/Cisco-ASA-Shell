@@ -10,23 +10,29 @@ xmlns="http://schemas.qualisystems.com/ResourceManagement/ShellsConfigurationSch
             <Description>Discovers the device structure and populate its attributes.</Description>
         </AutoLoad>
         <Attributes>
-            <Attribute Name="SNMP Version" Value="" />
-            <Attribute Name="SNMP Read Community" Value="" />
-            <Attribute Name="SNMP Write Community" Value="" />
-            <Attribute Name="SNMP V3 User" Value="" />
-            <Attribute Name="SNMP V3 Password" Value="" />
-            <Attribute Name="SNMP V3 Private Key" Value="" />
-            <Attribute Name="CLI Connection Type" Value="Auto" />
-            <Attribute Name="User" Value="" />
-            <Attribute Name="Password" Value="" />
-            <Attribute Name="Enable Password" Value="" />
-            <Attribute Name="Console Server IP Address" Value="" />
-            <Attribute Name="Console Port" Value="0" />
-            <Attribute Name="Console User" Value="" />
-			<Attribute Name="Console Password" Value="" />
-			<Attribute Name="Backup Location" Value="" />
-			<Attribute Name="Sessions Concurrency Limit" Value="1" />
-			<Attribute Name="Power Management" Value="False" />
+                <Attribute Name="SNMP Version" Value="" />
+                <Attribute Name="SNMP Read Community" Value="Quali" />
+                <Attribute Name="SNMP Write Community" Value="" />
+                <Attribute Name="SNMP V3 User" Value="" />
+                <Attribute Name="SNMP V3 Password" Value="" />
+                <Attribute Name="SNMP V3 Private Key" Value="" />
+                <Attribute Name="Enable SNMP" Value="True" />
+                <Attribute Name="Disable SNMP" Value="False" />
+                <Attribute Name="CLI TCP Port" Value="0" />
+                <Attribute Name="CLI Connection Type" Value="Auto" />
+                <Attribute Name="User" Value="" />
+                <Attribute Name="Password" Value="" />
+                <Attribute Name="Enable Password" Value="" />
+                <Attribute Name="Console Server IP Address" Value="" />
+                <Attribute Name="Console Port" Value="0" />
+                <Attribute Name="Console User" Value="" />
+                <Attribute Name="Console Password" Value="" />
+                <Attribute Name="Backup Type" Value="File System" />
+                <Attribute Name="Backup User" Value="" />
+                <Attribute Name="Backup Password" Value="" />
+                <Attribute Name="Backup Location" Value="" />
+                <Attribute Name="Sessions Concurrency Limit" Value="1" />
+                <Attribute Name="Power Management" Value="True" />
         </Attributes>
     </ResourceTemplate>
 </ResourceTemplates>

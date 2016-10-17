@@ -4,7 +4,7 @@
 import re
 from cloudshell.firewall.cisco.asa.autoload.cisco_asa_snmp_autoload import CiscoASASNMPAutoload
 from cloudshell.firewall.cisco.asa.cisco_asa_configuration_operations import CiscoASAConfigurationOperations
-from cloudshell.firewall.cisco.asa.cisco_asa_send_command_operations import CiscoASASendCommandOperations
+from cloudshell.firewall.cisco.asa.cisco_asa_run_command_operations import CiscoASARunCommandOperations
 from cloudshell.shell.core.context_utils import get_decrypted_password_by_attribute_name_wrapper
 
 
@@ -45,4 +45,4 @@ def enter_enable_mode(session):
 CONFIGURATION_OPERATIONS_CLASS = CiscoASAConfigurationOperations
 FIRMWARE_OPERATIONS_CLASS = CiscoASAConfigurationOperations
 AUTOLOAD_OPERATIONS_CLASS = CiscoASASNMPAutoload
-SEND_COMMAND_OPERATIONS_CLASS = CiscoASASendCommandOperations
+SEND_COMMAND_OPERATIONS_CLASS = CiscoASARunCommandOperations

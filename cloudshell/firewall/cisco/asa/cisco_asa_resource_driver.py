@@ -1,143 +1,202 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import inject
 
-from cloudshell.firewall.generic_bootstrap import FirewallGenericBootstrap
+from cloudshell.firewall.cisco.asa.autoload.cisco_asa_snmp_autoload import CiscoASASNMPAutoload as Autoload
+from cloudshell.firewall.cisco.asa.cisco_asa_run_command_operations import CiscoASARunCommandOperations as RunCommandOperations
+from cloudshell.firewall.cisco.asa.cisco_asa_state_operations import CiscoASAStateOperations as StateOperations
+from cloudshell.firewall.cisco.asa.cisco_asa_firmware_operations import CiscoASAFirmwareOperations as FirmwareOperations
+from cloudshell.firewall.cisco.asa.cisco_asa_configuration_operations import CiscoASAConfigurationOperations as ConfigurationOperations
+
+from cloudshell.firewall.generic_bootstrap import FirewallGenericBootstrap as Bootstrap
 from cloudshell.firewall.firewall_resource_driver_interface import FirewallResourceDriverInterface
-from cloudshell.shell.core.context_utils import context_from_args
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 
 import cloudshell.firewall.cisco.asa.cisco_asa_configuration as driver_config
+
+from cloudshell.shell.core.context_utils import ContextFromArgsMeta
 
 SPLITTER = "-"*60
 
 
 class CiscoASAResourceDriver(ResourceDriverInterface, FirewallResourceDriverInterface):
-    def __init__(self):
-        bootstrap = FirewallGenericBootstrap()
+    __metaclass__ = ContextFromArgsMeta
+
+    def __init__(self, config=None, autoload=None, run_command_operations=None, firmware_operations=None):
+        super(CiscoASAResourceDriver, self).__init__()
+        self.run_command_operations = run_command_operations
+        self.firmware_operations = firmware_operations
+        self.autoload = autoload
+        bootstrap = Bootstrap()
         bootstrap.add_config(driver_config)
+        if config:
+            bootstrap.add_config(config)
         bootstrap.initialize()
 
-    @context_from_args
+    @property
+    def _firmware_operations(self):
+        return self.firmware_operations or FirmwareOperations()
+
+    @property
+    def _autoload(self):
+        return self.autoload or Autoload()
+
+    @property
+    def _run_command_operations(self):
+        return self.run_command_operations or RunCommandOperations()
+
+    @property
+    def _configuration_operations(self):
+        return ConfigurationOperations()
+
+    @property
+    def _state_operations(self):
+        return StateOperations()
+
     def initialize(self, context):
-        """Initialize method
-
-        :type context: cloudshell.shell.core.context.driver_context.InitCommandContext
-        """
-
-        return 'Finished initializing'
+        pass
 
     def cleanup(self):
         pass
 
-    @context_from_args
     def ApplyConnectivityChanges(self, context, request):
         pass
 
-    @context_from_args
-    def restore(self, context, path, config_type, restore_method):
-        """Restore selected file to the provided destination
+    def get_inventory(self, context):
+        """ Get device structure with all standard attributes
+
+        :return: AutoLoadDetails object
+        """
+
+        return self._autoload.discover()
+
+    def run_custom_command(self, context, custom_command):
+        """ Send custom command
+
+        :param custom_command: command
+        :return: command execution output
+        """
+
+        self._run_command_operations.logger.info("{splitter}\nRun method 'Send Custom Command' with parameters:\n"
+                                                 "command = {command}\n{splitter}".format(splitter=SPLITTER,
+                                                                                           command=custom_command))
+        return self._run_command_operations.run_custom_command(custom_command)
+
+    def run_custom_config_command(self, context, custom_command):
+        """ Send custom command in configuration mode
+
+        :param custom_command: command
+        :return: command execution output
+        """
+
+        self._run_command_operations.logger.info("{splitter}\nRun method 'Send Custom Config Command' with parameters:"
+                                                 "\ncommand = {command}\n{splitter}".format(splitter=SPLITTER,
+                                                                                            command=custom_command))
+        return self._run_command_operations.run_custom_config_command(custom_command)
+
+    def send_custom_command(self, context, custom_command):
+        """ Send custom command
+
+        :param custom_command: command
+        :return: command execution output
+        """
+
+        self._run_command_operations.logger.info("{splitter}\nRun method 'Send Custom Command' with parameters:\n"
+                                                 "command = {command}\n{splitter}".format(splitter=SPLITTER,
+                                                                                          command=custom_command))
+        return self._run_command_operations.run_custom_command(custom_command)
+
+    def send_custom_config_command(self, context, custom_command):
+        """ Send custom command in configuration mode
+
+        :param custom_command: command
+        :return: command execution output
+        """
+
+        self._run_command_operations.logger.info("{splitter}\nRun method 'Send Custom Config Command' with parameters:"
+                                                 "\ncommand = {command}\n{splitter}".format(splitter=SPLITTER,
+                                                                                            command=custom_command))
+        return self._run_command_operations.run_custom_config_command(custom_command)
+
+    def load_firmware(self, context, path):
+        """Upload and updates firmware on the resource
+
+        :param path: full path to firmware file, i.e.tftp://10.10.10.1/firmware.bin
+        :return: result
+        """
+
+        self._firmware_operations.logger.info("{splitter}\nRun method 'Load Firmware' with parameters:\n"
+                                              "path = {path}\n"
+                                              "{splitter}".format(splitter=SPLITTER,
+                                                                  path=path))
+        return self._firmware_operations.load_firmware(path)
+
+    def save(self, context, folder_path, configuration_type="running"):
+        """Save selected file to the provided destination
+
+        :param configuration_type: source file, which will be saved
+        :param folder_path: destination path where file will be saved
+        :return saved configuration file name
+        """
+
+        if not configuration_type:
+            configuration_type = "running"
+        self._configuration_operations.logger.info("{splitter}\nRun method 'Save' with parameters:\n"
+                                                   "configuration_type = {configuration_type},\n"
+                                                   "folder_path = {folder_path},\n"
+                                                   "{splitter}".format(splitter=SPLITTER,
+                                                                       folder_path=folder_path,
+                                                                       configuration_type=configuration_type))
+        return self._configuration_operations.save(folder_path=folder_path, configuration_type=configuration_type)
+
+    def restore(self, context, path, configuration_type="running", restore_method="override"):
+        """ Restore selected file to the provided destination
 
         :param path: source config file
-        :param config_type: running or startup configs
+        :param configuration_type: running or startup configs
         :param restore_method: append or override methods
         """
 
-        configuration_operations = inject.instance('configuration_operations')
-        configuration_operations.logger.info("{splitter}\nRun method 'Restore' with parameters:"
-                                             "path = {path},\n"
-                                             "config_type = {config_type},\n"
-                                             "restore_method = {restore_method}\n"
-                                             "{splitter}".format(splitter=SPLITTER,
-                                                                 path=path,
-                                                                 config_type=config_type,
-                                                                 restore_method=restore_method))
-        response = configuration_operations.restore_configuration(source_file=path, restore_method=restore_method,
-                                                                  config_type=config_type)
-        configuration_operations.logger.info('Restore completed')
-        configuration_operations.logger.info(response)
+        if not configuration_type:
+            configuration_type = 'running'
 
-    @context_from_args
-    def save(self, context, destination_host, source_filename):
-        """Save selected file to the provided destination
+        if not restore_method:
+            restore_method = 'override'
 
-        :param source_filename: source file, which will be saved
-        :param destination_host: destination path where file will be saved
-        """
+        self._configuration_operations.logger.info("{splitter}\nRun method 'Restore' with parameters:"
+                                                   "path = {path},\n"
+                                                   "config_type = {config_type},\n"
+                                                   "restore_method = {restore_method}\n"
+                                                   "{splitter}".format(splitter=SPLITTER,
+                                                                       path=path,
+                                                                       config_type=configuration_type,
+                                                                       restore_method=restore_method))
+        return self._configuration_operations.restore(path, configuration_type, restore_method)
 
-        configuration_operations = inject.instance('configuration_operations')
-        configuration_operations.logger.info("{splitter}\nRun method 'Save' with parameters:\n"
-                                             "destination_host = {destination_host},\n"
-                                             "source_filename = {source_filename}\n"
-                                             "{splitter}".format(splitter=SPLITTER,
-                                                                 destination_host=destination_host,
-                                                                 source_filename=source_filename))
-        response = configuration_operations.save_configuration(destination_host, source_filename)
-        configuration_operations.logger.info('Save completed')
+    def orchestration_save(self, context, mode='shallow', custom_params=None):
+
+        if not mode:
+            mode = 'shallow'
+
+        self._configuration_operations.logger.info("{splitter}\nOrchestration save started".format(splitter=SPLITTER))
+
+        response = self._configuration_operations.orchestration_save(mode=mode, custom_params=custom_params)
+        self._configuration_operations.logger.info("Orchestration save completed\n{splitter}".format(splitter=SPLITTER))
         return response
 
-    @context_from_args
-    def get_inventory(self, context):
-        """Return device structure with all standard attributes
+    def orchestration_restore(self, context, saved_artifact_info, custom_params=None):
+        self._configuration_operations.logger.info("{splitter}\nOrchestration restore started".format(splitter=SPLITTER))
+        self._configuration_operations.orchestration_restore(saved_artifact_info=saved_artifact_info,
+                                                             custom_params=custom_params)
 
-        :return: response
-        :rtype: string
-        """
+        self._configuration_operations.logger.info("Orchestration restore completed\n{splitter}".format(splitter=SPLITTER))
 
-        autoload_operations = inject.instance("autoload_operations")
-        response = autoload_operations.discover()
-        autoload_operations.logger.info('Autoload completed')
-        return response
+    def health_check(self, context):
+        """ Performs device health check """
 
-    @context_from_args
-    def update_firmware(self, context, remote_host, file_path):
-        """Upload and updates firmware on the resource
+        return self._state_operations.health_check()
 
-        :param remote_host: path to tftp:// server where firmware file is stored
-        :param file_path: firmware file name
-        :return: result
-        :rtype: string
-        """
-
-        firmware_operations = inject.instance("firmware_operations")
-        firmware_operations.logger.info("{splitter}\nRun method 'Load Firmware' with parameters:\n"
-                                        "remote_host = {remote_host},\n"
-                                        "file_path = {file_path}\n"
-                                        "{splitter}".format(splitter=SPLITTER,
-                                                            remote_host=remote_host,
-                                                            file_path=file_path))
-        response = firmware_operations.update_firmware(remote_host=remote_host, file_path=file_path)
-        firmware_operations.logger.info(response)
-
-    @context_from_args
-    def send_custom_command(self, context, command):
-        """Send custom command
-
-        :return: result
-        :rtype: string
-        """
-
-        send_command_operations = inject.instance("send_command_operations")
-        send_command_operations.logger.info("{splitter}\nRun method 'Send Custom Command' with parameters:\n"
-                                            "command = {command}\n{splitter}".format(splitter=SPLITTER, command=command))
-        response = send_command_operations.send_command(command=command)
-        return response
-
-    @context_from_args
-    def send_custom_config_command(self, context, command):
-        """Send custom command in configuration mode
-
-        :return: result
-        :rtype: string
-        """
-
-        send_command_operations = inject.instance("send_command_operations")
-        send_command_operations.logger.info("{splitter}\nRun method 'Send Custom Config Command' with parameters:\n"
-                                            "command = {command}\n{splitter}".format(splitter=SPLITTER, command=command))
-        result_str = send_command_operations.send_config_command(command=command)
-        return result_str
-
-    @context_from_args
     def shutdown(self, context):
+        """ Shutdown device """
+
         pass
